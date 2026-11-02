@@ -865,8 +865,9 @@ function sunburnSupported(root) {
   return Boolean(root) && fs.existsSync(path.join(root, 'tools', 'mods', 'romhack.py')) && gameFeatures(root).sunburn;
 }
 
-const SUNBURN_UNSUPPORTED = 'This game version has no Super Mario Sunburn support yet. Under Settings, Game source, choose the repository ' +
-  'https://github.com/ikevik/sms-pc-port.git and the branch sunburn, then Update game and try again.';
+const SUNBURN_UNSUPPORTED = 'This game version has no Super Mario Sunburn support yet. Under Settings, Manage, Game source (Advanced), ' +
+  'enter the game repository https://github.com/ikevik/sms-pc-port.git and the branch sunburn, press Use this source, ' +
+  'then Update game and try again.';
 
 function sunburnBuildCommand(root, settings, platform = process.platform, environment = process.env) {
   if (platform === 'win32') throw new Error('Super Mario Sunburn is not available on Windows yet.');
