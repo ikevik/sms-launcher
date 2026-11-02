@@ -759,8 +759,10 @@ function refresh(data) {
   $('install-eclipse').textContent = data.eclipseInstalled ? 'Reinstall Eclipse' : 'Install Eclipse';
   $('eclipse-note').hidden = !config.settings.eclipse;
   // Super Mario Sunburn: the patch is chosen here; not on Windows yet (the game's build.sh path is Linux and macOS).
-  $('sunburn-row').hidden = platform.id === 'windows';
-  $('sunburn-note').hidden = platform.id === 'windows';
+  // (Sunburn is chosen in the Game dropdown; its row is only state. Not on Windows yet.)
+  for (const option of $('gameVariant').options) if (option.value === 'sunburn') option.hidden = option.disabled = platform.id === 'windows';
+  $('sunburn-note').hidden = platform.id === 'windows' || !config.settings.sunburn;
+  $('gameVariant').disabled = Boolean(data.active);
   $('sunburn-patch-name').textContent = config.settings.sunburnPatch
     ? `Patch: ${config.settings.sunburnPatch.split(/[\\/]/).pop()}` : 'Choose its patch, then Sunburn sets up when you play.';
   $('sunburn').disabled = Boolean(data.active);
@@ -854,6 +856,7 @@ function refresh(data) {
   renderRanges();
   for (const key of ['fullscreen', 'invertCameraX', 'invertCameraY', 'invertFluddAimY', 'freeCamera', 'cstickAim', 'cstickOrbit', 'backgroundInput', 'nintendoLayout', 'mouseCamera', 'closeCameraMouse', 'rawMouse', 'skipMovies', 'skipIntro', 'pauseTracker', 'radar', 'autoSave', 'heatHaze', 'overlay', 'fxaa', 'hudEdges', 'textures', 'shaderWarmup', 'cutscenes', 'eclipse', 'eclipseSunshineMovies', 'autoUpdate', 'shareUsage', 'discordPresence', 'autoBackups', 'darkMode']) $(key).checked = config.settings[key];
   $('sunburn').checked = Boolean(config.settings.sunburn);
+  $('gameVariant').value = config.settings.eclipse ? 'eclipse' : config.settings.sunburn ? 'sunburn' : 'sunshine';
   sunburnPatch = config.settings.sunburnPatch || '';
   renderTheme();
   keyBindings = config.settings.keyBindings || {};
@@ -2262,7 +2265,14 @@ $('open-custom-textures').addEventListener('click', () => window.sms.openCustomT
 $('open-custom-cutscenes').addEventListener('click', () => window.sms.openCustomCutscenes().catch(showError));
 for (const key of ['arch', 'widescreen', 'resolution', 'volume', 'musicVolume', 'sfxVolume', 'frameRate', 'language', 'vsync', 'skipMovies', 'skipIntro', 'pauseTracker', 'radar', 'autoSave', 'heatHaze', 'overlay', 'fullscreen', 'fullscreenMode', 'exclusiveResolution', 'display', 'invertCameraX', 'invertCameraY', 'invertFluddAimY', 'freeCamera', 'cstickAim', 'cstickOrbit', 'backgroundInput', 'nintendoLayout', 'cameraSpeed', 'mouseCamera', 'closeCameraMouse', 'mouseSensitivity', 'rawMouse', 'msaa', 'fxaa', 'anisotropic', 'sharpen', 'brightness', 'colorSpace', 'gameGamma', 'displayGamma', 'aspect', 'presentFilter', 'hudEdges', 'textures', 'textureLoading', 'shaderWarmup', 'cutscenes', 'eclipse', 'eclipseSunshineMovies', 'autoUpdate', 'shareUsage', 'discordPresence', 'autoBackups', 'darkMode', 'updateChannel', 'buttonPrompts', 'promptPad', 'hdr', 'hdrCalibration', 'hdrPaperWhite', 'hdrPeak', 'hdrContrast', 'hdrSaturation', 'hdrHighlights', 'fsrMode', 'renderer', 'appleSilicon', 'coopSplit'])
   $(key).addEventListener('change', saveSettings);
-$('sunburn').addEventListener('change', saveSettings);
+// One choice for the game: Sunshine, Eclipse or Sunburn. The switches under it hold the setting, as before.
+$('gameVariant').addEventListener('change', () => {
+  const variant = $('gameVariant').value;
+  $('eclipse').checked = variant === 'eclipse';
+  $('sunburn').checked = variant === 'sunburn';
+  renderDependents();
+  saveSettings();
+});
 for (const key of ['volume', 'musicVolume', 'sfxVolume']) $(key).addEventListener('input', renderVolume);
 for (const key of ['cameraSpeed', 'mouseSensitivity', 'sharpen', 'brightness']) $(key).addEventListener('input', renderRanges);
 for (const key of ['fullscreen', 'fullscreenMode', 'mouseCamera', 'eclipse', 'widescreen', 'buttonPrompts', 'presentFilter', 'textures', 'textureLoading', 'gameGamma']) $(key).addEventListener('input', () => renderDependents());
