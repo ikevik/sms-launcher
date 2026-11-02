@@ -2354,8 +2354,6 @@ function registerHandlers() {
       if (rom) await checkEclipseDisc(rom);
       if (operation || active) throw new Error('Finish the current task before changing settings.');
     }
-    if (settings.sunburn && (!settings.sunburnPatch || !fs.existsSync(settings.sunburnPatch)))
-      throw new Error('Choose the Super Mario Sunburn patch first (the "Choose patch" button under the Sunburn switch).');
     if (settings.arch !== config.settings.arch || settings.eclipse !== config.settings.eclipse || settings.sunburn !== config.settings.sunburn)
       config.previousInstall = port.playableInstall({ ...config, saveDirectory: currentSaveDirectory() }) || config.previousInstall;
     const channelChanged = settings.updateChannel !== config.settings.updateChannel;

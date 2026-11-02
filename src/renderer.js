@@ -760,9 +760,9 @@ function refresh(data) {
   $('eclipse-note').hidden = !config.settings.eclipse;
   // Super Mario Sunburn: the patch is chosen here; not on Windows yet (the game's build.sh path is Linux and macOS).
   $('sunburn-row').hidden = platform.id === 'windows';
-  $('sunburn-note').hidden = platform.id === 'windows' || !config.settings.sunburn;
+  $('sunburn-note').hidden = platform.id === 'windows';
   $('sunburn-patch-name').textContent = config.settings.sunburnPatch
-    ? `Patch: ${config.settings.sunburnPatch.split(/[\\/]/).pop()}` : 'Choose its patch to set Sunburn up.';
+    ? `Patch: ${config.settings.sunburnPatch.split(/[\\/]/).pop()}` : 'Choose its patch, then Sunburn sets up when you play.';
   $('sunburn').disabled = Boolean(data.active);
   $('choose-sunburn-patch').disabled = Boolean(data.active);
   $('install-eclipse').disabled = !data.repoReady || !data.romReady || Boolean(data.active);
