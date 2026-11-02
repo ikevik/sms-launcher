@@ -887,6 +887,16 @@ async function installEclipse(root = requireRepo()) {
   return launch(cmd.command, cmd.args, { cwd: cmd.cwd, env: cmd.env }, 'Install Eclipse from your disc');
 }
 
+// Super Mario Sunburn: the player's own disc plus the patch they chose, made into mods/sunburn/ by the game's
+// tools/mods/romhack.py (which checks the disc and the result).
+async function installSunburn(root = requireRepo(), settings = config.settings, rom = port.validateRom(config.rom)) {
+  const patch = settings.sunburnPatch;
+  if (!patch || !fs.existsSync(patch)) throw new Error('Choose the Super Mario Sunburn patch (its .xdelta, or the .zip it came in) under Settings first.');
+  await ensureBuildTools();
+  const cmd = port.commandFor(root, 'sunburn-install', [patch, rom], process.platform, toolEnv());
+  return launch(cmd.command, cmd.args, { cwd: cmd.cwd, env: cmd.env }, 'Install Sunburn from your disc and patch');
+}
+
 // Windows build tools removed under Manage game (removeBuildTools) or by hand,
 // with a game that plays without them: the downloads that only add to it, and
 // would otherwise download the tools first for their installers, wait for the
@@ -1097,18 +1107,21 @@ async function build(forceFresh = false) {
   else await updateTextureExtras(root, settings);
   await updateLanguagePack(root, settings);
   if (settings.eclipse && !fs.existsSync(path.join(root, port.ECLIPSE_ISO))) await installEclipse(root);
+  if (settings.sunburn && !fs.existsSync(path.join(root, port.SUNBURN_ISO))) await installSunburn(root, settings, rom);
   await updateEclipseMaps(root, settings);
   await updateEclipseTextures(root, settings);
-  const disc = port.gameDisc(root, rom, settings.eclipse);
+  const disc = port.gameDisc(root, rom, settings.eclipse, settings.sunburn);
   const env = await withBuildCaches(toolEnv(port.buildEnvironment(settings, disc, root)), root);
   env.NINJA_STATUS = '[%f/%t] ';
   const compile = buildEnv => {
     const cmd = settings.eclipse
       ? port.eclipseBuildCommand(root, settings, process.platform, buildEnv)
-      : port.commandFor(root, 'build', [disc], process.platform, buildEnv);
+      : settings.sunburn
+        ? port.sunburnBuildCommand(root, settings, process.platform, buildEnv)
+        : port.commandFor(root, 'build', [disc], process.platform, buildEnv);
     return game.buildSafely(root, settings, saveDirectory,
       // A build that fails because antivirus deleted or blocked a tool says so instead of CMake's error.
-      () => launch(cmd.command, cmd.args, { cwd: cmd.cwd, env: cmd.env }, settings.eclipse ? 'Build Eclipse port' : 'Build Sunshine port')
+      () => launch(cmd.command, cmd.args, { cwd: cmd.cwd, env: cmd.env }, settings.eclipse ? 'Build Eclipse port' : settings.sunburn ? 'Build Sunburn port' : 'Build Sunshine port')
         .catch(error => {
           const userData = app.getPath('userData');
           throw hintedError(error) || buildTools.deletedToolsError(userData) || buildTools.blockedToolError(userData, error.output) || error;
@@ -1373,7 +1386,7 @@ async function play(installation = null, session = null) {
   if (!binaryReady(root, settings)) throw new Error('Set up this version of the game before playing.');
   if (!port.hdVisualsInstalled(root, settings))
     throw new Error('HD visuals need to be set up. Return to the main screen to finish setup, or turn them off in Settings.');
-  const disc = port.gameDisc(root, rom, settings.eclipse);
+  const disc = port.gameDisc(root, rom, settings.eclipse, settings.sunburn);
   makeSaveBackup('before-play');
   // A player who joins plays the host's save: their own memory card stays out of it.
   const saveDir = saves.prepareSaveDirectory(session?.mode === 'join'
@@ -1436,7 +1449,7 @@ async function play(installation = null, session = null) {
     fs.mkdirSync(path.dirname(env.SMS_GX_SHADER_CACHE), { recursive: true });
   }
   if (portableRoot && !env.SMS_TEXTURE_PACK_CACHE) env.SMS_TEXTURE_PACK_CACHE = portable.textureCache(portableRoot);
-  const cmd = settings.eclipse
+  const cmd = settings.eclipse || settings.sunburn
     ? port.eclipseRunCommand(root, settings, disc, process.platform, env)
     : port.commandFor(root, 'run', [disc], process.platform, env);
   const startedAt = Date.now();
@@ -2341,7 +2354,9 @@ function registerHandlers() {
       if (rom) await checkEclipseDisc(rom);
       if (operation || active) throw new Error('Finish the current task before changing settings.');
     }
-    if (settings.arch !== config.settings.arch || settings.eclipse !== config.settings.eclipse)
+    if (settings.sunburn && (!settings.sunburnPatch || !fs.existsSync(settings.sunburnPatch)))
+      throw new Error('Choose the Super Mario Sunburn patch first (the "Choose patch" button under the Sunburn switch).');
+    if (settings.arch !== config.settings.arch || settings.eclipse !== config.settings.eclipse || settings.sunburn !== config.settings.sunburn)
       config.previousInstall = port.playableInstall({ ...config, saveDirectory: currentSaveDirectory() }) || config.previousInstall;
     const channelChanged = settings.updateChannel !== config.settings.updateChannel;
     const sharingChanged = settings.shareUsage !== config.settings.shareUsage;
@@ -2358,6 +2373,19 @@ function registerHandlers() {
     return state();
   });
   ipcMain.handle('update-channels', () => updateChannels());
+  ipcMain.handle('choose-sunburn-patch', async () => {
+    if (operation || active) throw new Error('Finish the current task before changing game files.');
+    const chosen = await dialog.showOpenDialog(window, {
+      title: 'Choose the Super Mario Sunburn patch',
+      properties: ['openFile'],
+      filters: [{ name: 'Patch or archive', extensions: ['xdelta', 'xdelta3', 'vcdiff', 'zip', '7z', 'rar'] }, { name: 'All files', extensions: ['*'] }]
+    });
+    if (chosen.canceled) return state();
+    config.settings = { ...config.settings, sunburnPatch: chosen.filePaths[0] };
+    saveConfig();
+    return state();
+  });
+
   ipcMain.handle('choose-rom', async () => {
     if (operation || active) throw new Error('Finish the current task before changing game files.');
     const chosen = await dialog.showOpenDialog(window, {

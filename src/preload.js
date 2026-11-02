@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('sms', {
   displayInfo: () => ipcRenderer.invoke('display-info'),
   openHdrCalibration: () => ipcRenderer.invoke('open-hdr-calibration'),
   chooseRom: () => ipcRenderer.invoke('choose-rom'),
+  chooseSunburnPatch: () => ipcRenderer.invoke('choose-sunburn-patch'),
   marioModel: () => ipcRenderer.invoke('mario-model'),
   characters: () => ipcRenderer.invoke('characters'),
   characterModel: id => ipcRenderer.invoke('character-model', id),

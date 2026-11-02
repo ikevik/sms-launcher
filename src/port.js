@@ -11,6 +11,8 @@ const { describe } = require('./disc');
 
 const PORT_URL = 'https://github.com/chasem-dev/sms-pc-port.git';
 const ECLIPSE_ISO = path.join('mods', 'eclipse', 'Super Mario Eclipse v1.1.0.iso');
+// The disc tools/mods/romhack.py makes from the player's own disc and the Sunburn patch (the game's romhacks.json).
+const SUNBURN_ISO = path.join('mods', 'sunburn', 'Super Mario Sunburn.iso');
 // The keyboard layout saved key bindings are changes from: 2 is the keyboard and mouse one (savedControls).
 const CONTROLS_LAYOUT = 2;
 
@@ -201,6 +203,9 @@ function normalizeSettings(input = {}, platform = process.platform, hostArch = p
     // HD cutscenes are a separate 5 GB download, off unless chosen.
     cutscenes: Boolean(input.cutscenes),
     eclipse: Boolean(input.eclipse),
+    // Super Mario Sunburn, a ROM hack made from the player's disc and a patch they choose (sunburnPatch); not together with Eclipse.
+    sunburn: Boolean(input.sunburn) && !input.eclipse,
+    sunburnPatch: typeof input.sunburnPatch === 'string' ? input.sunburnPatch.slice(0, 1000) : '',
     // In Eclipse, the movies it kept from Sunshine play as Sunshine has them (eclipseMovieEnvironment); on unless turned off.
     eclipseSunshineMovies: input.eclipseSunshineMovies !== false,
     renderer: choiceSetting(input.renderer, info.renderers, 'opengl'),
@@ -466,6 +471,7 @@ function gameFeatures(root) {
   return { vulkan: has(path.join('platform', 'gx', 'src', 'vk')), appleSilicon: has(path.join('tools', 'gameptr')),
     // keyboard and mouse default keys (bindings.js DEFAULTS); an older game has the classic ones built in
     mouseKeys: mentions('bindings.txt', 'A = MOUSE_LEFT'),
+    sunburn: mentions('build.sh', 'SMS_SUNBURN'),
     eclipseAppleSilicon: mentions(path.join('platform', 'mods', 'eclipse', 'lib', 'CMakeLists.txt'), 'SMS_GAMEPTR_PLUGIN'),
     // Eclipse plays the movies it kept from Sunshine from the Sunshine disc or the HD cutscenes (eclipseMovieEnvironment)
     eclipseSunshineMovies: mentions(path.join('platform', 'dvd', 'dvd.cpp'), 'SMS_ECLIPSE_SUNSHINE_MOVIES'),
@@ -574,6 +580,7 @@ function buildEnvironment(settings, disc, root, { customTextures = null, customC
     ...process.env,
     SMS_ARCH: settings.arch,
     SMS_ECLIPSE: settings.eclipse ? '1' : '0',
+    SMS_SUNBURN: settings.sunburn ? '1' : '0',
     SMS_GX_BACKEND: settings.renderer === 'vulkan' ? 'vulkan' : 'opengl',
     // Older game versions build the Vulkan backend on Linux only by default. The
     // game doesn't build it on Windows by default, where it is untested, so it is
@@ -667,7 +674,12 @@ function eclipseMovieEnvironment(root, settings, rom) {
   return env;
 }
 
-function gameDisc(root, rom, eclipse) {
+function gameDisc(root, rom, eclipse, sunburn = false) {
+  if (sunburn && !eclipse) {
+    const sunburnDisc = path.join(root, SUNBURN_ISO);
+    if (!fs.existsSync(sunburnDisc)) throw new Error('Set up Super Mario Sunburn with your own game disc and its patch first.');
+    return sunburnDisc;
+  }
   if (!eclipse) return validateRom(rom);
   const modDisc = path.join(root, ECLIPSE_ISO);
   if (!fs.existsSync(modDisc)) throw new Error('Set up Eclipse using your own game disc file first.');
@@ -676,7 +688,7 @@ function gameDisc(root, rom, eclipse) {
 
 function binaryPath(root, settings, platform = process.platform) {
   const info = platformInfo(platform);
-  const suffix = settings.eclipse ? '-eclipse' : '';
+  const suffix = settings.eclipse ? '-eclipse' : settings.sunburn ? '-sunburn' : '';
   return path.join(root, 'build', `${info.id}-${settings.arch}${suffix}`, platform === 'win32' ? 'sms.exe' : 'sms');
 }
 
@@ -748,6 +760,12 @@ function launcherScript(name) {
 }
 
 function commandFor(root, action, args = [], platform = process.platform, environment = process.env) {
+  // The Sunburn disc: the player's disc and the patch they chose, args [patch, disc].
+  if (action === 'sunburn-install') {
+    if (platform === 'win32') throw new Error('Super Mario Sunburn is not available on Windows yet.');
+    return { command: 'python3', args: [path.join(root, 'tools', 'mods', 'romhack.py'), 'install', 'sunburn', '--patch', args[0], '--iso', args[1]],
+      cwd: root, env: environment };
+  }
   if (platform === 'win32' && action === 'run')
     return gameRunCommand(root, { arch: environment.SMS_ARCH || '64' }, args[0], platform, environment);
   const textureProgress = launcherScript('texture-progress.py');
@@ -841,7 +859,14 @@ function gameRuntimeFolders(settings, environment = process.env) {
 
 function eclipseRunCommand(...args) { return gameRunCommand(...args); }
 
-module.exports = { PORT_URL, ECLIPSE_ISO, platformInfo, isPort, validateRom, normalizeSettings, savedSettings, gameFeatures,
+// The game with Super Mario Sunburn's code (SMS_SUNBURN=1 build.sh, docs/SUNBURN.md in the game): no disc bundled into it.
+function sunburnBuildCommand(root, settings, platform = process.platform, environment = process.env) {
+  if (platform === 'win32') throw new Error('Super Mario Sunburn is not available on Windows yet.');
+  return { command: path.join(root, 'build.sh'), args: [], cwd: root,
+    env: { ...environment, SMS_SUNBURN: '1', SMS_STANDALONE: '0', SMS_DISC_IMAGE: '' } };
+}
+
+module.exports = { PORT_URL, ECLIPSE_ISO, SUNBURN_ISO, sunburnBuildCommand, platformInfo, isPort, validateRom, normalizeSettings, savedSettings, gameFeatures,
   texturePackDirectory, texturePackInstalled, customTextureDirectory, customTexturesPresent, texturePackFolders,
   customCutsceneDirectory, customCutsceneMovies, customCutscenesPresent, textureExtrasDirectory, textureExtrasSupported, textureExtrasInstalled, textureExtrasWanted,
   eclipseMapsDirectory, eclipseMapsSupported, eclipseMapsInstalled, eclipseMapsWanted,

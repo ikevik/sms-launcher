@@ -2,6 +2,7 @@
 
 const $ = id => document.getElementById(id);
 let current;
+let sunburnPatch = '';
 let changing = false;
 let wizardStep = null;
 let setupPending = false;
@@ -757,6 +758,13 @@ function refresh(data) {
   $('eclipse-movies-row').hidden = data.repoReady && !data.features?.eclipseSunshineMovies;
   $('install-eclipse').textContent = data.eclipseInstalled ? 'Reinstall Eclipse' : 'Install Eclipse';
   $('eclipse-note').hidden = !config.settings.eclipse;
+  // Super Mario Sunburn: the patch is chosen here; not on Windows yet (the game's build.sh path is Linux and macOS).
+  $('sunburn-row').hidden = platform.id === 'windows';
+  $('sunburn-note').hidden = platform.id === 'windows' || !config.settings.sunburn;
+  $('sunburn-patch-name').textContent = config.settings.sunburnPatch
+    ? `Patch: ${config.settings.sunburnPatch.split(/[\\/]/).pop()}` : 'Choose its patch to set Sunburn up.';
+  $('sunburn').disabled = Boolean(data.active);
+  $('choose-sunburn-patch').disabled = Boolean(data.active);
   $('install-eclipse').disabled = !data.repoReady || !data.romReady || Boolean(data.active);
   $('clean').disabled = !data.repoReady || Boolean(data.active);
   $('clean-preview').disabled = !data.repoReady || Boolean(data.active);
@@ -845,6 +853,8 @@ function refresh(data) {
   renderVolume();
   renderRanges();
   for (const key of ['fullscreen', 'invertCameraX', 'invertCameraY', 'invertFluddAimY', 'freeCamera', 'cstickAim', 'cstickOrbit', 'backgroundInput', 'nintendoLayout', 'mouseCamera', 'closeCameraMouse', 'rawMouse', 'skipMovies', 'skipIntro', 'pauseTracker', 'radar', 'autoSave', 'heatHaze', 'overlay', 'fxaa', 'hudEdges', 'textures', 'shaderWarmup', 'cutscenes', 'eclipse', 'eclipseSunshineMovies', 'autoUpdate', 'shareUsage', 'discordPresence', 'autoBackups', 'darkMode']) $(key).checked = config.settings[key];
+  $('sunburn').checked = Boolean(config.settings.sunburn);
+  sunburnPatch = config.settings.sunburnPatch || '';
   renderTheme();
   keyBindings = config.settings.keyBindings || {};
   padBindings = config.settings.padBindings || {};
@@ -1245,6 +1255,7 @@ function settingsValue() {
     coopSplit: $('coopSplit').value,
     invertCameraX: $('invertCameraX').checked, invertCameraY: $('invertCameraY').checked, invertFluddAimY: $('invertFluddAimY').checked, hudEdges: $('hudEdges').checked, textures: $('textures').checked, cutscenes: $('cutscenes').checked,
     textureLoading: $('textureLoading').value, shaderWarmup: $('shaderWarmup').checked,
+    sunburn: $('sunburn').checked, sunburnPatch,
     eclipse: $('eclipse').checked, eclipseSunshineMovies: $('eclipseSunshineMovies').checked, autoUpdate: $('autoUpdate').checked, shareUsage: $('shareUsage').checked, discordPresence: $('discordPresence').checked, autoBackups: $('autoBackups').checked, darkMode: $('darkMode').checked, updateChannel: $('updateChannel').value,
     keyBindings, padBindings, softTrigger: Number($('softTrigger').value), stickDeadzone: Number($('stickDeadzone').value),
     rumbleStrength: Number($('rumbleStrength').value), fluddTrigger: Number($('fluddTrigger').value), buttonPrompts: $('buttonPrompts').value,
@@ -1313,7 +1324,7 @@ function resetLog(sequence) {
 for (const [id, method] of Object.entries({
   'choose-rom': 'chooseRom', 'choose-rom-settings': 'chooseRom',
   'choose-repo-settings': 'chooseRepo', 'choose-location': 'chooseLocation',
-  'play-installed': 'play', 'play-previous': 'playPrevious', 'build': 'build', 'install-eclipse': 'installEclipse',
+  'play-installed': 'play', 'play-previous': 'playPrevious', 'build': 'build', 'install-eclipse': 'installEclipse', 'choose-sunburn-patch': 'chooseSunburnPatch',
   'clean-preview': 'cleanPreview', clean: 'clean', 'remove-build-tools': 'removeBuildTools', 'backup-saves': 'backupSaves',
   'open-backups': 'openBackups', stop: 'stop', docs: 'openDocs'
 })) $(id).addEventListener('click', () => action(method));
@@ -2251,6 +2262,7 @@ $('open-custom-textures').addEventListener('click', () => window.sms.openCustomT
 $('open-custom-cutscenes').addEventListener('click', () => window.sms.openCustomCutscenes().catch(showError));
 for (const key of ['arch', 'widescreen', 'resolution', 'volume', 'musicVolume', 'sfxVolume', 'frameRate', 'language', 'vsync', 'skipMovies', 'skipIntro', 'pauseTracker', 'radar', 'autoSave', 'heatHaze', 'overlay', 'fullscreen', 'fullscreenMode', 'exclusiveResolution', 'display', 'invertCameraX', 'invertCameraY', 'invertFluddAimY', 'freeCamera', 'cstickAim', 'cstickOrbit', 'backgroundInput', 'nintendoLayout', 'cameraSpeed', 'mouseCamera', 'closeCameraMouse', 'mouseSensitivity', 'rawMouse', 'msaa', 'fxaa', 'anisotropic', 'sharpen', 'brightness', 'colorSpace', 'gameGamma', 'displayGamma', 'aspect', 'presentFilter', 'hudEdges', 'textures', 'textureLoading', 'shaderWarmup', 'cutscenes', 'eclipse', 'eclipseSunshineMovies', 'autoUpdate', 'shareUsage', 'discordPresence', 'autoBackups', 'darkMode', 'updateChannel', 'buttonPrompts', 'promptPad', 'hdr', 'hdrCalibration', 'hdrPaperWhite', 'hdrPeak', 'hdrContrast', 'hdrSaturation', 'hdrHighlights', 'fsrMode', 'renderer', 'appleSilicon', 'coopSplit'])
   $(key).addEventListener('change', saveSettings);
+$('sunburn').addEventListener('change', saveSettings);
 for (const key of ['volume', 'musicVolume', 'sfxVolume']) $(key).addEventListener('input', renderVolume);
 for (const key of ['cameraSpeed', 'mouseSensitivity', 'sharpen', 'brightness']) $(key).addEventListener('input', renderRanges);
 for (const key of ['fullscreen', 'fullscreenMode', 'mouseCamera', 'eclipse', 'widescreen', 'buttonPrompts', 'presentFilter', 'textures', 'textureLoading', 'gameGamma']) $(key).addEventListener('input', () => renderDependents());

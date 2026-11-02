@@ -973,7 +973,7 @@ test('game features come from the game version on disk', () => {
   const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sms-features-'));
   try {
-    const none = { vulkan: false, appleSilicon: false, mouseKeys: false, eclipseAppleSilicon: false, eclipseSunshineMovies: false,
+    const none = { vulkan: false, appleSilicon: false, mouseKeys: false, sunburn: false, eclipseAppleSilicon: false, eclipseSunshineMovies: false,
       cutscenesWithoutTextures: false, coop: false, coopCharacter: false, characterLook: false, onlineCharacters: false };
     assert.deepEqual(port.gameFeatures(root), none);
     assert.deepEqual(port.gameFeatures(null), none);

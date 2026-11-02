@@ -45,7 +45,7 @@ function gitRevision(root) {
 function identity(settings, platform = process.platform, arch = process.arch, source = release) {
   const asset = tools.assetFor(platform, arch);
   return { schema: 1, gameVersion: source.version, commit: source.commit, decomp: source.decomp,
-    platform, hostArch: arch, gameArch: settings.arch, eclipse: Boolean(settings.eclipse),
+    platform, hostArch: arch, gameArch: settings.arch, eclipse: Boolean(settings.eclipse), ...(settings.sunburn ? { sunburn: true } : {}),
     toolVersion: tools.toolsetFor(platform, arch), toolSha256: asset.sha256 };
 }
 
