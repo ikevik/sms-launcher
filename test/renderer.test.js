@@ -405,6 +405,41 @@ test('the Discord toggle shows the setting and is saved with the others', async 
   assert.equal(ui.calls.at(-1)[1].discordPresence, false);
 });
 
+test('the Game list picks Sunshine, Eclipse or Sunburn, one at a time, and shows the patch row for Sunburn', async () => {
+  const data = state(); data.config.settings = port.normalizeSettings({});
+  const ui = await renderer(data);
+  const list = ui.elements.get('gameVariant');
+  assert.equal(list.value, 'sunshine');
+  assert.equal(ui.elements.get('sunburn-note').hidden, true);
+
+  list.value = 'sunburn';
+  list.dispatch('change');
+  await new Promise(setImmediate);
+  assert.equal(ui.calls.at(-1)[1].sunburn, true);
+  assert.equal(ui.calls.at(-1)[1].eclipse, false);
+
+  list.value = 'eclipse';
+  list.dispatch('change');
+  await new Promise(setImmediate);
+  assert.equal(ui.calls.at(-1)[1].eclipse, true);
+  assert.equal(ui.calls.at(-1)[1].sunburn, false);
+
+  list.value = 'sunshine';
+  list.dispatch('change');
+  await new Promise(setImmediate);
+  assert.equal(ui.calls.at(-1)[1].eclipse, false);
+  assert.equal(ui.calls.at(-1)[1].sunburn, false);
+});
+
+test('Sunburn on shows its chosen patch, and the list reads back the saved game', async () => {
+  const data = state();
+  data.config.settings = port.normalizeSettings({ sunburn: true, sunburnPatch: '/downloads/sunburn/console.xdelta' }, 'darwin');
+  const ui = await renderer(data);
+  assert.equal(ui.elements.get('gameVariant').value, 'sunburn');
+  assert.equal(ui.elements.get('sunburn-note').hidden, false);
+  assert.match(ui.elements.get('sunburn-patch-name').textContent, /console\.xdelta/);
+});
+
 test('Back up automatically shows the setting and is saved with the others', async () => {
   const data = state(); data.config.settings = port.normalizeSettings({});
   const ui = await renderer(data);
