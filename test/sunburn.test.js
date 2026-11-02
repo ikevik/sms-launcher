@@ -78,3 +78,18 @@ test('Sunburn changes a build\'s identity only when it is on, so other installs 
   const b = gameVersion.identity({ ...base, sunburn: true }, 'linux', 'x64');
   assert.equal(b.sunburn, true);
 });
+
+test('a game version without the Sunburn installer is refused with a way forward', () => {
+  const root = temporary();
+  try {
+    fs.mkdirSync(path.join(root, 'tools', 'mods'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'build.sh'), 'if [[ "${SMS_SUNBURN:-0}" == 1 ]]; then :; fi\n');
+    assert.equal(port.sunburnSupported(root), false);   // build option, but no installer
+    fs.writeFileSync(path.join(root, 'tools', 'mods', 'romhack.py'), '#');
+    assert.equal(port.sunburnSupported(root), true);
+    fs.writeFileSync(path.join(root, 'build.sh'), '# SMS_ECLIPSE=1\n');
+    assert.equal(port.sunburnSupported(root), false);   // installer, but no build option
+    assert.equal(port.sunburnSupported(null), false);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  assert.match(port.SUNBURN_UNSUPPORTED, /ikevik\/sms-pc-port\.git.*sunburn/);
+});

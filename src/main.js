@@ -890,6 +890,7 @@ async function installEclipse(root = requireRepo()) {
 // Super Mario Sunburn: the player's own disc plus the patch they chose, made into mods/sunburn/ by the game's
 // tools/mods/romhack.py (which checks the disc and the result).
 async function installSunburn(root = requireRepo(), settings = config.settings, rom = port.validateRom(config.rom)) {
+  if (!port.sunburnSupported(root)) throw new Error(port.SUNBURN_UNSUPPORTED);
   const patch = settings.sunburnPatch;
   if (!patch || !fs.existsSync(patch)) throw new Error('Choose the Super Mario Sunburn patch (its .xdelta, or the .zip it came in) under Settings first.');
   await ensureBuildTools();
@@ -1097,6 +1098,7 @@ async function build(forceFresh = false) {
       throw new Error('The update folder has changed. Choose another setup location in Settings and try again.');
     game.carryUserFiles(original, root);
   }
+  if (settings.sunburn && !port.sunburnSupported(root)) throw new Error(port.SUNBURN_UNSUPPORTED);
   if (settings.arch === 'arm64' && !port.gameFeatures(root).appleSilicon)
     throw new Error('This game version has no Apple Silicon build. Turn off Apple Silicon build under Manage game, Files, or update the game.');
   if (settings.arch === 'arm64' && settings.eclipse && !port.gameFeatures(root).eclipseAppleSilicon)

@@ -860,13 +860,21 @@ function gameRuntimeFolders(settings, environment = process.env) {
 function eclipseRunCommand(...args) { return gameRunCommand(...args); }
 
 // The game with Super Mario Sunburn's code (SMS_SUNBURN=1 build.sh, docs/SUNBURN.md in the game): no disc bundled into it.
+// The game version has Super Mario Sunburn: its installer and build option (not in the release the launcher ships with yet).
+function sunburnSupported(root) {
+  return Boolean(root) && fs.existsSync(path.join(root, 'tools', 'mods', 'romhack.py')) && gameFeatures(root).sunburn;
+}
+
+const SUNBURN_UNSUPPORTED = 'This game version has no Super Mario Sunburn support yet. Under Settings, Game source, choose the repository ' +
+  'https://github.com/ikevik/sms-pc-port.git and the branch sunburn, then Update game and try again.';
+
 function sunburnBuildCommand(root, settings, platform = process.platform, environment = process.env) {
   if (platform === 'win32') throw new Error('Super Mario Sunburn is not available on Windows yet.');
   return { command: path.join(root, 'build.sh'), args: [], cwd: root,
     env: { ...environment, SMS_SUNBURN: '1', SMS_STANDALONE: '0', SMS_DISC_IMAGE: '' } };
 }
 
-module.exports = { PORT_URL, ECLIPSE_ISO, SUNBURN_ISO, sunburnBuildCommand, platformInfo, isPort, validateRom, normalizeSettings, savedSettings, gameFeatures,
+module.exports = { PORT_URL, ECLIPSE_ISO, SUNBURN_ISO, SUNBURN_UNSUPPORTED, sunburnSupported, sunburnBuildCommand, platformInfo, isPort, validateRom, normalizeSettings, savedSettings, gameFeatures,
   texturePackDirectory, texturePackInstalled, customTextureDirectory, customTexturesPresent, texturePackFolders,
   customCutsceneDirectory, customCutsceneMovies, customCutscenesPresent, textureExtrasDirectory, textureExtrasSupported, textureExtrasInstalled, textureExtrasWanted,
   eclipseMapsDirectory, eclipseMapsSupported, eclipseMapsInstalled, eclipseMapsWanted,
